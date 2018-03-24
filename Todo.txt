@@ -1,0 +1,3 @@
+Added proper 404 detection
+--------------------------------
+Check api.red.wemesh.ca url not user URL
