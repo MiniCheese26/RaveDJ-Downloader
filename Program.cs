@@ -47,6 +47,8 @@ namespace RaveDJ_Downloader
                 jsonURL = "https://api.red.wemesh.ca/mashups/" + urlID[3];
             }
 
+            webC.Encoding = Encoding.UTF8;
+
             string jsonContent = webC.DownloadString(jsonURL);
 
             dynamic jsonObject = JObject.Parse(jsonContent);
@@ -68,8 +70,16 @@ namespace RaveDJ_Downloader
 
         static void DownloadFolderProcess()
         {
-            string localJsonText = File.ReadAllText(Path.GetFullPath(Directory.GetCurrentDirectory()) + @"\settings.json");
+            string localJsonDir = Path.GetFullPath(Directory.GetCurrentDirectory()) + @"\settings.json";
+
+            if (!File.Exists(localJsonDir))
+            {
+                CreateJson(localJsonDir);
+            }
+
             string folderTitle = Regex.Replace(title, ".mp4", "");
+
+            string localJsonText = File.ReadAllText(localJsonDir);
 
             dynamic localJson = JObject.Parse(localJsonText);
 
@@ -225,67 +235,80 @@ namespace RaveDJ_Downloader
             }
         }
 
-    static void ConvertAudio(string fileLocation)
-    {
-        string fileMP3Extension = Regex.Replace(fileLocation, ".mp4", ".mp3");
-
-        var inputFile = new MediaFile { Filename = fileLocation };
-        var outputFile = new MediaFile { Filename = fileMP3Extension };
-
-        using (var engine = new Engine())
+        static void ConvertAudio(string fileLocation)
         {
-            Console.WriteLine("\nConverting...");
-            engine.Convert(inputFile, outputFile);
-        }
+            string fileMP3Extension = Regex.Replace(fileLocation, ".mp4", ".mp3");
 
-        Console.WriteLine("\nDone");
+            var inputFile = new MediaFile { Filename = fileLocation };
+            var outputFile = new MediaFile { Filename = fileMP3Extension };
 
-        Console.WriteLine("Would you like to delete the mp4? y/n");
-        string deleteMP4 = Console.ReadLine().ToLower();
-
-        if (deleteMP4 == "y")
-        {
-            File.Delete(fileLocation);
-            Console.WriteLine("\nDeleted!");
-        }
-
-        Console.ReadKey();
-        Console.Clear();
-        Main();
-    }
-
-    static string DefaultDownloadLocation(bool firstTimeCheck)
-    {
-        if (firstTimeCheck == true)
-        {
-            Console.WriteLine("\nEnter your default directory");
-            string defaultDir = Console.ReadLine();
-
-            while (!Directory.Exists(defaultDir))
+            using (var engine = new Engine())
             {
-                Console.WriteLine("\nDirectory doesn't exist");
-
-                defaultDir = Console.ReadLine();
+                Console.WriteLine("\nConverting...");
+                engine.Convert(inputFile, outputFile);
             }
 
-            string jsonText = File.ReadAllText(Directory.GetCurrentDirectory() + @"\settings.json");
-            dynamic jsonObj = JsonConvert.DeserializeObject(jsonText);
-            jsonObj["location"] = defaultDir;
-            jsonObj["useDefaultFolder"] = "yes";
-            string jsonWrite = JsonConvert.SerializeObject(jsonObj, Formatting.Indented);
-            File.WriteAllText(Path.GetFullPath(Directory.GetCurrentDirectory()) + @"\settings.json", jsonWrite);
-            return defaultDir;
+            Console.WriteLine("\nDone");
+
+            Console.WriteLine("Would you like to delete the mp4? y/n");
+            string deleteMP4 = Console.ReadLine().ToLower();
+
+            if (deleteMP4 == "y")
+            {
+                File.Delete(fileLocation);
+                Console.WriteLine("\nDeleted!");
+            }
+
+            Console.ReadKey();
+            Console.Clear();
+            Main();
         }
-        else
+
+        static string DefaultDownloadLocation(bool firstTimeCheck)
         {
-            string defaultDirectoryText = File.ReadAllText(Path.GetFullPath(Directory.GetCurrentDirectory()) + @"\settings.json");
+            if (firstTimeCheck == true)
+            {
+                Console.WriteLine("\nEnter your default directory");
+                string defaultDir = Console.ReadLine();
 
-            dynamic defaultDirectoryParse = JObject.Parse(defaultDirectoryText);
+                while (!Directory.Exists(defaultDir))
+                {
+                    Console.WriteLine("\nDirectory doesn't exist");
 
-            string defaultDirectory = defaultDirectoryParse.location;
+                    defaultDir = Console.ReadLine();
+                }
 
-            return defaultDirectory;
+                string jsonText = File.ReadAllText(Directory.GetCurrentDirectory() + @"\settings.json");
+                dynamic jsonObj = JsonConvert.DeserializeObject(jsonText);
+                jsonObj["location"] = defaultDir;
+                jsonObj["useDefaultFolder"] = "yes";
+                string jsonWrite = JsonConvert.SerializeObject(jsonObj, Formatting.Indented);
+                File.WriteAllText(Path.GetFullPath(Directory.GetCurrentDirectory()) + @"\settings.json", jsonWrite);
+                return defaultDir;
+            }
+            else
+            {
+                string defaultDirectoryText = File.ReadAllText(Path.GetFullPath(Directory.GetCurrentDirectory()) + @"\settings.json");
+
+                dynamic defaultDirectoryParse = JObject.Parse(defaultDirectoryText);
+
+                string defaultDirectory = defaultDirectoryParse.location;
+
+                return defaultDirectory;
+            }
+        }
+
+        static void CreateJson(string localJsonDir)
+        {
+            File.Create(localJsonDir).Close();
+
+            dynamic localJsonContent = new JObject();
+            localJsonContent.location = "";
+            localJsonContent.useDefaultFolder = "";
+
+            string jsonWrite = JsonConvert.SerializeObject(localJsonContent, Formatting.Indented);
+            File.WriteAllText(localJsonDir, jsonWrite);
+            return;
         }
     }
-}
 }
