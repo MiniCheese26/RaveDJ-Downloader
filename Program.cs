@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Net;
 using Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
 using System.IO;
 using MediaToolkit.Model;
 using MediaToolkit;
@@ -14,6 +15,8 @@ namespace RaveDJ_Downloader
 {
     class Program
     {
+        public static string downloadFolder;
+
         static void Main()
         {
             Console.WriteLine("Enter URL");
@@ -48,14 +51,37 @@ namespace RaveDJ_Downloader
             string title = jsonObject.data.title;
             title = title + ".mp4";
 
-            Console.WriteLine("\nEnter download folder");
-            string downloadFolder = Console.ReadLine();
+            string localJsonText = File.ReadAllText(Path.GetFullPath(Directory.GetCurrentDirectory()) + @"\settings.json");
 
-            while (!Directory.Exists(downloadFolder))
+            dynamic localJson = JObject.Parse(localJsonText);
+
+            if (localJson.location == "")
             {
-                Console.WriteLine("\nDirectory does not exist, try again");
+                Console.WriteLine("\nSetup a default downloader folder? y/n");
+                string defaultFolderPrompt = Console.ReadLine().ToLower();
 
-                downloadFolder = Console.ReadLine();
+                if (defaultFolderPrompt == "y")
+                {
+                    bool firstTimeCheck = true;
+                    downloadFolder = DefaultDownloadLocation(firstTimeCheck);
+                }
+                else
+                {
+                    Console.WriteLine("\nEnter download folder");
+                    downloadFolder = Console.ReadLine();
+
+                    while (!Directory.Exists(downloadFolder))
+                    {
+                        Console.WriteLine("\nDirectory does not exist, try again");
+
+                        downloadFolder = Console.ReadLine();
+                    }
+                }
+            }
+            else if (localJson.location != "") //Using else caused a weird '}' missing error
+            {
+                bool firstTimeCheck = false;
+                downloadFolder = DefaultDownloadLocation(firstTimeCheck);
             }
 
             ServicePointManager.ServerCertificateValidationCallback = delegate { return true; }; //Site for hosting uses an expired certificate at the time of coding
@@ -73,6 +99,11 @@ namespace RaveDJ_Downloader
                 webC.DownloadFile(videoURL, downloadFolder + @"\" + title);
             }
 
+            DownloadDone(title);
+        }
+        
+        static void DownloadDone(string title)
+        {
             Console.WriteLine("\nDone");
             Console.WriteLine("1. to enter a new link or 2. to convert to mp3");
             string endChoiceStr = Console.ReadLine();
@@ -145,6 +176,39 @@ namespace RaveDJ_Downloader
             Console.ReadKey();
             Console.Clear();
             Main();
+        }
+
+        static string DefaultDownloadLocation(bool firstTimeCheck)
+        {
+            if (firstTimeCheck == true)
+            {
+                Console.WriteLine("\nEnter your default directory");
+                string defaultDir = Console.ReadLine();
+
+                while (!Directory.Exists(defaultDir))
+                {
+                    Console.WriteLine("\nDirectory doesn't exist");
+
+                    defaultDir = Console.ReadLine();
+                }
+
+                string jsonText = File.ReadAllText(Directory.GetCurrentDirectory() + @"\settings.json");
+                dynamic jsonObj = JsonConvert.DeserializeObject(jsonText);
+                jsonObj["location"] = defaultDir;
+                string jsonWrite = JsonConvert.SerializeObject(jsonObj, Formatting.Indented);
+                File.WriteAllText(Path.GetFullPath(Directory.GetCurrentDirectory()) + @"\settings.json", jsonWrite);
+                return defaultDir;
+            }
+            else
+            {
+                string defaultDirectoryText = File.ReadAllText(Path.GetFullPath(Directory.GetCurrentDirectory()) + @"\settings.json");
+
+                dynamic defaultDirectoryParse = JObject.Parse(defaultDirectoryText);
+
+                string defaultDirectory = defaultDirectoryParse.location;
+
+                return defaultDirectory;
+            }
         }
     }
 }
