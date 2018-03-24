@@ -1,5 +1,7 @@
 # RaveDJ-Downloader
 
+![ScraperImage](https://i.imgur.com/8oUmhlo.png "Screenshot")
+
 Downloads videos from Rave.dj
 
 * Creates file with Rave.dj generated name
