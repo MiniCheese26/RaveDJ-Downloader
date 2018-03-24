@@ -16,6 +16,9 @@ namespace RaveDJ_Downloader
     class Program
     {
         public static string downloadFolder;
+        public static string title;
+        public static string videoURL;
+        public static WebClient webC = new WebClient();
 
         static void Main()
         {
@@ -33,8 +36,6 @@ namespace RaveDJ_Downloader
 
             string jsonURL = "https://api.red.wemesh.ca/mashups/" + urlID[3];
 
-            WebClient webC = new WebClient();
-
             string jsonContent = webC.DownloadString(jsonURL);
 
             dynamic jsonObject = JObject.Parse(jsonContent);
@@ -47,15 +48,21 @@ namespace RaveDJ_Downloader
                 Main();
             }
 
-            string videoURL = jsonObject.data.maxUrl;
-            string title = jsonObject.data.title;
+            videoURL = jsonObject.data.maxUrl;
+            title = jsonObject.data.title;
             title = title + ".mp4";
 
+            DownloadFolderProcess();
+        }
+
+        static void DownloadFolderProcess()
+        {
             string localJsonText = File.ReadAllText(Path.GetFullPath(Directory.GetCurrentDirectory()) + @"\settings.json");
+            string folderTitle = Regex.Replace(title, ".mp4", "");
 
             dynamic localJson = JObject.Parse(localJsonText);
 
-            if (localJson.location == "")
+            if (localJson.useDefaultFolder == "")
             {
                 Console.WriteLine("\nSetup a default downloader folder? y/n");
                 string defaultFolderPrompt = Console.ReadLine().ToLower();
@@ -64,26 +71,69 @@ namespace RaveDJ_Downloader
                 {
                     bool firstTimeCheck = true;
                     downloadFolder = DefaultDownloadLocation(firstTimeCheck);
+
+                    Directory.CreateDirectory(downloadFolder + @"\" + folderTitle);
+                    downloadFolder = downloadFolder + @"\" + folderTitle;
+
+                    DownloadFunction();
                 }
                 else
                 {
-                    Console.WriteLine("\nEnter download folder");
-                    downloadFolder = Console.ReadLine();
+                    string jsonText = File.ReadAllText(Directory.GetCurrentDirectory() + @"\settings.json");
+                    dynamic jsonObj = JsonConvert.DeserializeObject(jsonText);
+                    jsonObj["useDefaultFolder"] = "no";
+                    string jsonWrite = JsonConvert.SerializeObject(jsonObj, Formatting.Indented);
+                    File.WriteAllText(Path.GetFullPath(Directory.GetCurrentDirectory()) + @"\settings.json", jsonWrite);
 
-                    while (!Directory.Exists(downloadFolder))
+                    string downloadPath = Path.GetFullPath(Directory.GetCurrentDirectory()) + @"\Downloads";
+
+                    if (!Directory.Exists(downloadPath))
                     {
-                        Console.WriteLine("\nDirectory does not exist, try again");
-
-                        downloadFolder = Console.ReadLine();
+                        Directory.CreateDirectory(downloadPath);
+                        Directory.CreateDirectory(downloadPath + @"\" + folderTitle);
+                        downloadFolder = downloadPath + @"\" + folderTitle;
+                        DownloadFunction();
+                    }
+                    else
+                    {
+                        Directory.CreateDirectory(downloadPath + @"\" + folderTitle);
+                        downloadFolder = downloadPath + @"\" + folderTitle;
+                        DownloadFunction();
                     }
                 }
             }
-            else if (localJson.location != "") //Using else caused a weird '}' missing error
+            else if (localJson.useDefaultFolder == "yes")
             {
                 bool firstTimeCheck = false;
                 downloadFolder = DefaultDownloadLocation(firstTimeCheck);
-            }
 
+                Directory.CreateDirectory(downloadFolder + @"\" + folderTitle);
+                downloadFolder = downloadFolder + @"\" + folderTitle;
+
+                DownloadFunction();
+            }
+            else if (localJson.useDefaultFolder == "no")
+            {
+                string downloadPath = Path.GetFullPath(Directory.GetCurrentDirectory()) + @"\Downloads";
+
+                if (!Directory.Exists(downloadPath))
+                {
+                    Directory.CreateDirectory(downloadPath);
+                    Directory.CreateDirectory(downloadPath + @"\" + folderTitle);
+                    downloadFolder = downloadPath + @"\" + folderTitle;
+                    DownloadFunction();
+                }
+                else
+                {
+                    Directory.CreateDirectory(downloadPath + @"\" + folderTitle);
+                    downloadFolder = downloadPath + @"\" + folderTitle;
+                    DownloadFunction();
+                }
+            }
+        }
+
+        static void DownloadFunction()
+        {
             ServicePointManager.ServerCertificateValidationCallback = delegate { return true; }; //Site for hosting uses an expired certificate at the time of coding
 
             if (File.Exists(downloadFolder + @"\" + title))
@@ -99,10 +149,10 @@ namespace RaveDJ_Downloader
                 webC.DownloadFile(videoURL, downloadFolder + @"\" + title);
             }
 
-            DownloadDone(title);
+            DownloadDone();
         }
         
-        static void DownloadDone(string title)
+        static void DownloadDone()
         {
             Console.WriteLine("\nDone");
             Console.WriteLine("1. to enter a new link or 2. to convert to mp3");
@@ -173,6 +223,16 @@ namespace RaveDJ_Downloader
             }
 
             Console.WriteLine("\nDone");
+
+            Console.WriteLine("Would you like to delete the mp4? y/n");
+            string deleteMP4 = Console.ReadLine().ToLower();
+
+            if (deleteMP4 == "y")
+            {
+                File.Delete(fileLocation);
+                Console.WriteLine("\nDeleted!");
+            }
+
             Console.ReadKey();
             Console.Clear();
             Main();
@@ -195,6 +255,7 @@ namespace RaveDJ_Downloader
                 string jsonText = File.ReadAllText(Directory.GetCurrentDirectory() + @"\settings.json");
                 dynamic jsonObj = JsonConvert.DeserializeObject(jsonText);
                 jsonObj["location"] = defaultDir;
+                jsonObj["useDefaultFolder"] = "yes";
                 string jsonWrite = JsonConvert.SerializeObject(jsonObj, Formatting.Indented);
                 File.WriteAllText(Path.GetFullPath(Directory.GetCurrentDirectory()) + @"\settings.json", jsonWrite);
                 return defaultDir;
