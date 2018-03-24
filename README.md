@@ -1,6 +1,6 @@
 # RaveDJ-Downloader
 
-![ScraperImage](https://i.imgur.com/bYfts0R.png "Screenshot")
+![ScraperImage](https://i.imgur.com/DzzObDZ.png "Screenshot")
 
 Downloads videos from Rave.dj
 
