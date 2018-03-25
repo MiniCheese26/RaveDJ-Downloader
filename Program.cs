@@ -3,13 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Text.RegularExpressions;
+using System.Threading;
 using System.Net;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
 using System.IO;
 using MediaToolkit.Model;
 using MediaToolkit;
-using System.Text.RegularExpressions;
 
 namespace RaveDJ_Downloader
 {
@@ -18,6 +19,8 @@ namespace RaveDJ_Downloader
         public static string downloadFolder;
         public static string title;
         public static string videoURL;
+        public static string thumbNail;
+        public static string artist;
         public static WebClient webC = new WebClient();
 
         static void Main()
@@ -64,6 +67,8 @@ namespace RaveDJ_Downloader
             videoURL = jsonObject.data.maxUrl;
             title = jsonObject.data.title;
             title = title + ".mp4";
+            thumbNail = jsonObject.data.thumbnail;
+            artist = jsonObject.data.artist;
 
             DownloadFolderProcess();
         }
@@ -85,7 +90,7 @@ namespace RaveDJ_Downloader
 
             if (localJson.useDefaultFolder == "")
             {
-                Console.WriteLine("\nSetup a default downloader folder? y/n");
+                Console.WriteLine("\nSetup a default download folder? y/n");
                 string defaultFolderPrompt = Console.ReadLine().ToLower();
 
                 if (defaultFolderPrompt == "y")
@@ -167,7 +172,15 @@ namespace RaveDJ_Downloader
             else
             {
                 Console.WriteLine("\nDownloading...");
-                webC.DownloadFile(videoURL, downloadFolder + @"\" + title);
+                webC.DownloadFileAsync(new Uri(videoURL), downloadFolder + @"\" + title);
+                using (var progress = new ProgressBar())
+                {
+                    for (int i = 0; i <= 100; i++)
+                    {
+                        progress.Report((double)i / 100);
+                        Thread.Sleep(20);
+                    }
+                }
             }
 
             DownloadDone();
@@ -244,7 +257,7 @@ namespace RaveDJ_Downloader
 
             using (var engine = new Engine())
             {
-                Console.WriteLine("\nConverting...");
+                Console.WriteLine("\nStarting Conversion...");
                 engine.Convert(inputFile, outputFile);
             }
 
@@ -257,9 +270,9 @@ namespace RaveDJ_Downloader
             {
                 File.Delete(fileLocation);
                 Console.WriteLine("\nDeleted!");
+                Console.ReadKey();
             }
 
-            Console.ReadKey();
             Console.Clear();
             Main();
         }
