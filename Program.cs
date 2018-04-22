@@ -9,8 +9,7 @@ using System.Net;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
 using System.IO;
-using MediaToolkit.Model;
-using MediaToolkit;
+using NAudio.Wave;
 
 namespace RaveDJ_Downloader
 {
@@ -19,8 +18,6 @@ namespace RaveDJ_Downloader
         public static string downloadFolder;
         public static string title;
         public static string videoURL;
-        public static string thumbNail;
-        public static string artist;
         public static WebClient webC = new WebClient();
 
         static void Main()
@@ -67,8 +64,6 @@ namespace RaveDJ_Downloader
             videoURL = jsonObject.data.maxUrl;
             title = jsonObject.data.title;
             title = title + ".mp4";
-            thumbNail = jsonObject.data.thumbnail;
-            artist = jsonObject.data.artist;
 
             DownloadFolderProcess();
         }
@@ -172,15 +167,7 @@ namespace RaveDJ_Downloader
             else
             {
                 Console.WriteLine("\nDownloading...");
-                webC.DownloadFileAsync(new Uri(videoURL), downloadFolder + @"\" + title);
-                using (var progress = new ProgressBar())
-                {
-                    for (int i = 0; i <= 100; i++)
-                    {
-                        progress.Report((double)i / 100);
-                        Thread.Sleep(20);
-                    }
-                }
+                webC.DownloadFile(videoURL, downloadFolder + @"\" + title);
             }
 
             DownloadDone();
@@ -252,13 +239,12 @@ namespace RaveDJ_Downloader
         {
             string fileMP3Extension = Regex.Replace(fileLocation, ".mp4", ".mp3");
 
-            var inputFile = new MediaFile { Filename = fileLocation };
-            var outputFile = new MediaFile { Filename = fileMP3Extension };
+            var inputFile = fileLocation;
+            var outputFile = fileMP3Extension;
 
-            using (var engine = new Engine())
+            using (var videoFile = new MediaFoundationReader(inputFile))
             {
-                Console.WriteLine("\nStarting Conversion...");
-                engine.Convert(inputFile, outputFile);
+                MediaFoundationEncoder.EncodeToMp3(videoFile, fileMP3Extension);
             }
 
             Console.WriteLine("\nDone");
