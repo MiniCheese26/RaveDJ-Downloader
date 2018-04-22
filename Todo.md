@@ -2,4 +2,4 @@
 
 ~~Create settings.json if it doesn't exist instead of including it in release and overwriting data~~ Done
 
-Find smaller library/dependency for converting audio
+~~Find smaller library/dependency for converting audio~~ Done
