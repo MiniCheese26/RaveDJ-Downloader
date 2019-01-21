@@ -90,9 +90,6 @@ namespace RaveDJ_Downloader
 
         static void DownloadFunction()
         {
-            ServicePointManager.ServerCertificateValidationCallback =
-                delegate { return true; }; //Site for hosting uses an expired certificate at the time of coding
-
             if (File.Exists(downloadFolder + @"\" + title))
             {
                 Console.WriteLine("\nFile already exists");
