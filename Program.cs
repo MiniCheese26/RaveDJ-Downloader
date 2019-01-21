@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -70,92 +70,28 @@ namespace RaveDJ_Downloader
 
         static void DownloadFolderProcess()
         {
-            string localJsonDir = Path.GetFullPath(Directory.GetCurrentDirectory()) + @"\settings.json";
-
-            if (!File.Exists(localJsonDir))
-            {
-                CreateJson(localJsonDir);
-            }
-
             string folderTitle = Regex.Replace(title, ".mp4", "");
+            string downloadPath = Path.GetFullPath(Directory.GetCurrentDirectory()) + @"\Downloads";
 
-            string localJsonText = File.ReadAllText(localJsonDir);
-
-            dynamic localJson = JObject.Parse(localJsonText);
-
-            if (localJson.useDefaultFolder == "")
+            if (!Directory.Exists(downloadPath))
             {
-                Console.WriteLine("\nSetup a default download folder? y/n");
-                string defaultFolderPrompt = Console.ReadLine().ToLower();
-
-                if (defaultFolderPrompt == "y")
-                {
-                    bool firstTimeCheck = true;
-                    downloadFolder = DefaultDownloadLocation(firstTimeCheck);
-
-                    Directory.CreateDirectory(downloadFolder + @"\" + folderTitle);
-                    downloadFolder = downloadFolder + @"\" + folderTitle;
-
-                    DownloadFunction();
-                }
-                else
-                {
-                    string jsonText = File.ReadAllText(Directory.GetCurrentDirectory() + @"\settings.json");
-                    dynamic jsonObj = JsonConvert.DeserializeObject(jsonText);
-                    jsonObj["useDefaultFolder"] = "no";
-                    string jsonWrite = JsonConvert.SerializeObject(jsonObj, Formatting.Indented);
-                    File.WriteAllText(Path.GetFullPath(Directory.GetCurrentDirectory()) + @"\settings.json", jsonWrite);
-
-                    string downloadPath = Path.GetFullPath(Directory.GetCurrentDirectory()) + @"\Downloads";
-
-                    if (!Directory.Exists(downloadPath))
-                    {
-                        Directory.CreateDirectory(downloadPath);
-                        Directory.CreateDirectory(downloadPath + @"\" + folderTitle);
-                        downloadFolder = downloadPath + @"\" + folderTitle;
-                        DownloadFunction();
-                    }
-                    else
-                    {
-                        Directory.CreateDirectory(downloadPath + @"\" + folderTitle);
-                        downloadFolder = downloadPath + @"\" + folderTitle;
-                        DownloadFunction();
-                    }
-                }
-            }
-            else if (localJson.useDefaultFolder == "yes")
-            {
-                bool firstTimeCheck = false;
-                downloadFolder = DefaultDownloadLocation(firstTimeCheck);
-
-                Directory.CreateDirectory(downloadFolder + @"\" + folderTitle);
-                downloadFolder = downloadFolder + @"\" + folderTitle;
-
+                Directory.CreateDirectory(downloadPath);
+                Directory.CreateDirectory(downloadPath + @"\" + folderTitle);
+                downloadFolder = downloadPath + @"\" + folderTitle;
                 DownloadFunction();
             }
-            else if (localJson.useDefaultFolder == "no")
+            else
             {
-                string downloadPath = Path.GetFullPath(Directory.GetCurrentDirectory()) + @"\Downloads";
-
-                if (!Directory.Exists(downloadPath))
-                {
-                    Directory.CreateDirectory(downloadPath);
-                    Directory.CreateDirectory(downloadPath + @"\" + folderTitle);
-                    downloadFolder = downloadPath + @"\" + folderTitle;
-                    DownloadFunction();
-                }
-                else
-                {
-                    Directory.CreateDirectory(downloadPath + @"\" + folderTitle);
-                    downloadFolder = downloadPath + @"\" + folderTitle;
-                    DownloadFunction();
-                }
+                Directory.CreateDirectory(downloadPath + @"\" + folderTitle);
+                downloadFolder = downloadPath + @"\" + folderTitle;
+                DownloadFunction();
             }
         }
 
         static void DownloadFunction()
         {
-            ServicePointManager.ServerCertificateValidationCallback = delegate { return true; }; //Site for hosting uses an expired certificate at the time of coding
+            ServicePointManager.ServerCertificateValidationCallback =
+                delegate { return true; }; //Site for hosting uses an expired certificate at the time of coding
 
             if (File.Exists(downloadFolder + @"\" + title))
             {
@@ -261,53 +197,6 @@ namespace RaveDJ_Downloader
 
             Console.Clear();
             Main();
-        }
-
-        static string DefaultDownloadLocation(bool firstTimeCheck)
-        {
-            if (firstTimeCheck == true)
-            {
-                Console.WriteLine("\nEnter your default directory");
-                string defaultDir = Console.ReadLine();
-
-                while (!Directory.Exists(defaultDir))
-                {
-                    Console.WriteLine("\nDirectory doesn't exist");
-
-                    defaultDir = Console.ReadLine();
-                }
-
-                string jsonText = File.ReadAllText(Directory.GetCurrentDirectory() + @"\settings.json");
-                dynamic jsonObj = JsonConvert.DeserializeObject(jsonText);
-                jsonObj["location"] = defaultDir;
-                jsonObj["useDefaultFolder"] = "yes";
-                string jsonWrite = JsonConvert.SerializeObject(jsonObj, Formatting.Indented);
-                File.WriteAllText(Path.GetFullPath(Directory.GetCurrentDirectory()) + @"\settings.json", jsonWrite);
-                return defaultDir;
-            }
-            else
-            {
-                string defaultDirectoryText = File.ReadAllText(Path.GetFullPath(Directory.GetCurrentDirectory()) + @"\settings.json");
-
-                dynamic defaultDirectoryParse = JObject.Parse(defaultDirectoryText);
-
-                string defaultDirectory = defaultDirectoryParse.location;
-
-                return defaultDirectory;
-            }
-        }
-
-        static void CreateJson(string localJsonDir)
-        {
-            File.Create(localJsonDir).Close();
-
-            dynamic localJsonContent = new JObject();
-            localJsonContent.location = "";
-            localJsonContent.useDefaultFolder = "";
-
-            string jsonWrite = JsonConvert.SerializeObject(localJsonContent, Formatting.Indented);
-            File.WriteAllText(localJsonDir, jsonWrite);
-            return;
         }
     }
 }
