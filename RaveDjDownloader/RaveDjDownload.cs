@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Net.Http;
+using System.Security;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using RaveDjDownloader.MashupJson;
@@ -103,8 +104,27 @@ namespace RaveDjDownloader
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine(ex.Message);
-                    Console.WriteLine($"\nFailed to create {saveDirectory}");
+                    switch (ex)
+                    {
+                        case UnauthorizedAccessException _:
+                            Message($"\nInvalid permissions to create save directory {saveDirectory}");
+                            break;
+                        case DirectoryNotFoundException _:
+                            Message("\nAttempted to create save directory on unmapped drive");
+                            break;
+                        case PathTooLongException _:
+                            Message("\nSave directory path is too long");
+                            break;
+                        case IOException _:
+                            Message($"\nFailed to create save directory {saveDirectory}");
+                            break;
+                        case NotSupportedException _:
+                            Message("\nSave directory contains illegal characters");
+                            break;
+                        default:
+                            throw;
+                    }
+
                     return string.Empty;
                 }
             }
@@ -123,29 +143,51 @@ namespace RaveDjDownloader
 
             try
             {
-                existingFileBytesLength = File.ReadAllBytes(filePath).Length;
+                existingFileBytesLength = new FileInfo(filePath).Length;
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message);
-                Message($"Failed to read bytes of existing file {Path.GetFileName(filePath)}");
+                switch (ex)
+                {
+                    case SecurityException _:
+                    case UnauthorizedAccessException _:
+                        Message($"\nAccess unauthorised to file {filePath}");
+                        break;
+                    case NotSupportedException _: 
+                        Message($"\nPath to existing download of {_id} contains illegal characters");
+                        break;
+                    case PathTooLongException _:
+                        Message($"\nPath to existing download of {_id} is too long");
+                        break;
+                    default:
+                        throw;
+                }
+                
                 return false;
             }
 
             using var headRequest = new HttpRequestMessage(HttpMethod.Head, downloadUri);
-            using HttpResponseMessage headResponse = await _httpClient.SendAsync(headRequest);
 
-            if (!headResponse.IsSuccessStatusCode)
+            try
             {
-                Message("Failed to send HEAD request for MP4 download");
-                return false;
+                using HttpResponseMessage headResponse = await _httpClient.SendAsync(headRequest);
+
+                if (!headResponse.IsSuccessStatusCode)
+                {
+                    Message("\nFailed to send HEAD request for MP4 download");
+                    return false;
+                }
+
+                var downloadLength = headResponse.Content.Headers.ContentLength;
+
+                if (downloadLength.HasValue)
+                {
+                    return downloadLength.Value == existingFileBytesLength;
+                }
             }
-
-            var downloadLength = headResponse.Content.Headers.ContentLength;
-
-            if (downloadLength.HasValue)
+            catch (HttpRequestException)
             {
-                return downloadLength.Value == existingFileBytesLength;
+                Message("\nFailed to send HEAD request for MP4 download");
             }
 
             return false;
@@ -164,12 +206,11 @@ namespace RaveDjDownloader
                         return await mashupFileResponse.Content.ReadAsByteArrayAsync();
                     }
 
-                    Message("Request for mashup file failed");
+                    Message("\nRequest for mashup file failed");
                 }
                 catch (HttpRequestException ex)
                 {
-                    Message(ex.Message);
-                    Message("Failed to download mashup file");
+                    Message("\nFailed to download mashup file");
                 }
             }
             
@@ -201,18 +242,17 @@ namespace RaveDjDownloader
                         }
                         catch (JsonReaderException ex)
                         {
-                            Console.WriteLine(ex.Message);
-                            Message("Failed to parse mashup JSON response");
+                            Message("\nFailed to parse mashup JSON response");
                         }
                     }
                     else
                     {
-                        Message("Request for mashup JSON failed");
+                        Message("\nRequest for mashup JSON failed");
                     }
                 }
                 catch (HttpRequestException)
                 {
-                    Message("Failed to send GET request to mashup content URL");
+                    Message("\nFailed to send GET request to mashup content URL");
                 }
             }
 
