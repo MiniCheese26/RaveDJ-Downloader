@@ -64,8 +64,14 @@ function addDownloadButton() {
 }
 
 function getOnClickCode() {
-    const videoUrl = document.getElementById('ForegroundPlayer_html5_api').src;
-    return `window.open('${videoUrl}','_blank')`;
+    const videoUrl = document.getElementById('ForegroundPlayer_html5_api');
+
+    if (videoUrl.src) {
+        return `window.open('${videoUrl.src}','_blank')`
+    }
+
+    console.log('Failed to retrieve download link');
+    return "window.open('','_blank')";
 }
 
 function waitForPlayer(callBack) {
