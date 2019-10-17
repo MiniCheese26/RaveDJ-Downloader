@@ -7,7 +7,7 @@
 ### Usage: raveDjDownloader.exe \<URL1\> \<URL2\> \<URL3\> ...
 
 * Downloads videos concurrently to speed up downloading
-* Edit config.json to set the number of concurrent downloads, max is 5 and the a default save location
+* Edit config.json to set the number of concurrent downloads, max is 5 and a default save location
 * By default the application creates a folder called Downloads in the application directory
 
 ### Dependencies
@@ -32,9 +32,30 @@
 
 window.addEventListener('load', waitForPlayer(addDownloadButton), false);
 
+let currentPage = location.href;
+
+setInterval(function() {
+    if (currentPage != location.href)
+    {
+        currentPage = location.href;
+        waitForPlayer(updateDownloadButton);
+    }
+}, 500);
+
+function updateDownloadButton() {
+    const buttonNode = document.getElementById('download-button-container');
+
+    if (!buttonNode) {
+        addDownloadButton();
+    } else {
+        const onclickCode = getOnClickCode();
+
+        buttonNode.innerHTML = `<button id="download-button" type="button" onclick="${onclickCode}">Download Mashup</button>`;
+    }
+}
+
 function addDownloadButton() {
-    const videoUrl = document.getElementById("ForegroundPlayer_html5_api").src;
-    const onclickCode = `window.open('${videoUrl}','_blank')`;
+    const onclickCode = getOnClickCode();
 
     const buttonNode = document.createElement('div');
     buttonNode.innerHTML = `<button id="download-button" type="button" onclick="${onclickCode}">Download Mashup</button>`;
@@ -42,13 +63,18 @@ function addDownloadButton() {
     document.body.appendChild(buttonNode);
 }
 
+function getOnClickCode() {
+    const videoUrl = document.getElementById('ForegroundPlayer_html5_api').src;
+    return `window.open('${videoUrl}','_blank')`;
+}
+
 function waitForPlayer(callBack) {
     window.setTimeout(function () {
-        const player = document.getElementById("ForegroundPlayer_html5_api");
-        if (player && player.src) {
+        const player = document.getElementById('ForegroundPlayer_html5_api');
+        if (player.src) {
             callBack();
         } else {
-         waitForPlayer(callBack);
+            waitForPlayer(callBack);
         }
     }, 500)
 }
