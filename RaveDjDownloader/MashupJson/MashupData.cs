@@ -19,5 +19,8 @@ namespace RaveDjDownloader.MashupJson
         
         [JsonProperty("stage")]
         public string? Stage { get; set; }
+        
+        [JsonProperty("artist")]
+        public string? Artist { get; set; }
     }
 }

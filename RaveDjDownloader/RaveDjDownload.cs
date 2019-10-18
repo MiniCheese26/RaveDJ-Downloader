@@ -46,17 +46,17 @@ namespace RaveDjDownloader
             Uri? downloadUrl = GetUrl(mashupJson.MashupData);
 
             if (downloadUrl != null) 
-                return await StartDownload(downloadUrl, mashupJson.MashupData.Title ?? "");
+                return await StartDownload(downloadUrl, mashupJson.MashupData.Title ?? "", mashupJson.MashupData.Artist ?? "");
             
             Message("Failed to find any valid download URL", true);
             return false;
 
         }
 
-        private async Task<bool> StartDownload(Uri downloadUri, string title)
+        private async Task<bool> StartDownload(Uri downloadUri, string title, string artist)
         {
-            Message($"Starting download of {title}.mp4");
-            string downloadPath = GetDownloadPath(title);
+            Message($"Starting download of [{artist} - {title}.mp4]");
+            string downloadPath = GetDownloadPath(title, artist);
             string downloadName = Path.GetFileName(downloadPath);
             bool fileExists = await DoesFileExist(downloadPath, downloadUri);
 
@@ -74,21 +74,27 @@ namespace RaveDjDownloader
                 return false;
             }
 
-            Message($"{downloadName} download complete");
+            Message($"[{downloadName}] download complete");
             return true;
         }
 
-        private string GetDownloadPath(string title)
+        private string GetDownloadPath(string title, string artist)
         {
             if (string.IsNullOrWhiteSpace(title))
             {
                 title = Path.GetRandomFileName().Split(".")[0];
             }
 
-            string saveDirectory = Path.Combine(_configuration.SaveLocation ?? "", title);
+            if (string.IsNullOrWhiteSpace(artist))
+            {
+                artist = "Unknown Artist";
+            }
 
+            string saveDirectory = Path.Combine(_configuration.SaveLocation ?? "", $"{artist} - {title}");
+            string saveFilePath = Path.Combine(saveDirectory, $"{artist} - {title}.mp4");
+            
             if (Directory.Exists(saveDirectory)) 
-                return Path.Combine(saveDirectory, $"{title}.mp4");
+                return saveFilePath;
             
             try
             {
@@ -102,7 +108,7 @@ namespace RaveDjDownloader
                         Message($"Invalid permissions to create save directory, {saveDirectory}", true);
                         break;
                     case DirectoryNotFoundException _:
-                        Message($"Attempted to create save directory on unmapped drive, {saveDirectory}", true);
+                        Message($"Attempted to create save directory on an unmapped drive, {saveDirectory}", true);
                         break;
                     case PathTooLongException _:
                         Message($"Save directory path is too long, {saveDirectory}", true);
@@ -120,7 +126,7 @@ namespace RaveDjDownloader
                 return string.Empty;
             }
 
-            return Path.Combine(saveDirectory, $"{title}.mp4");
+            return saveFilePath;
         }
 
         private async Task<bool> DoesFileExist(string filePath, Uri downloadUri)
@@ -142,7 +148,7 @@ namespace RaveDjDownloader
                 {
                     case SecurityException _:
                     case UnauthorizedAccessException _:
-                        Message($"Access unauthorised to file {filePath}", true);
+                        Message($"Invalid permissions to access {filePath}", true);
                         break;
                     case NotSupportedException _: 
                         Message($"Path to existing download of {_id} contains illegal characters, {filePath}", true);
@@ -219,6 +225,12 @@ namespace RaveDjDownloader
 
         private async Task<bool> WriteDownloadFile(Stream downloadStream, string downloadPath)
         {
+            if (string.IsNullOrWhiteSpace(downloadPath))
+            {
+                Message("Download path was empty", true);
+                return false;
+            }
+            
             FileStream? file = null;
                     
             try
@@ -227,7 +239,26 @@ namespace RaveDjDownloader
             }
             catch (Exception ex)
             {
-                Message(ex.Message, true);
+                switch (ex)
+                {
+                    case UnauthorizedAccessException _:
+                        Message($"Invalid permissions to create {downloadPath}", true);
+                        break;
+                    case PathTooLongException _:
+                        Message($"Path to save location too long, {downloadPath}", true);
+                        break;
+                    case DirectoryNotFoundException _:
+                        Message($"Attempted to create download file on an unmapped drive, {downloadPath}", true);
+                        break;
+                    case NotSupportedException _: 
+                        Message($"Path for download file contains illegal characters, {downloadPath}", true);
+                        break;
+                    case IOException _:
+                        Message($"I\\O error occured whilst creating download file, {downloadPath}", true);
+                        break;
+                    default:
+                        throw;
+                }
             }
 
             if (file == null)
@@ -245,7 +276,7 @@ namespace RaveDjDownloader
             }
                     
             file.Dispose();
-            return true;
+            return false;
         }
 
         private async Task<Mashup?> GetMashupJsonAsync()
