@@ -195,21 +195,14 @@ namespace RaveDjDownloader
                     if (!mashupFileResponse.IsSuccessStatusCode)
                         continue;
 
-                    Stream downloadStream = await mashupFileResponse.Content.ReadAsStreamAsync();
+                    await using Stream downloadStream = await mashupFileResponse.Content.ReadAsStreamAsync();
 
                     if (downloadStream == null || downloadStream.Length <= 0)
                         continue;
 
-                    await using FileStream file = File.Create(downloadPath);
-
-                    try
+                    if (await WriteDownloadFile(downloadStream, downloadPath))
                     {
-                        await downloadStream.CopyToAsync(file);
                         return true;
-                    }
-                    catch (Exception ex)
-                    {
-                        Message(ex.Message, true);
                     }
                 }
                 catch (HttpRequestException ex)
@@ -222,6 +215,37 @@ namespace RaveDjDownloader
             
             Message($"Failed to download {downloadUri}", true);
             return false;
+        }
+
+        private async Task<bool> WriteDownloadFile(Stream downloadStream, string downloadPath)
+        {
+            FileStream? file = null;
+                    
+            try
+            {
+                file = File.Create(downloadPath);
+            }
+            catch (Exception ex)
+            {
+                Message(ex.Message, true);
+            }
+
+            if (file == null)
+                return false;
+                    
+            try
+            {
+                await downloadStream.CopyToAsync(file);
+                file.Dispose();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Message(ex.Message, true);
+            }
+                    
+            file.Dispose();
+            return true;
         }
 
         private async Task<Mashup?> GetMashupJsonAsync()
