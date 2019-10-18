@@ -6,6 +6,11 @@
         <AssemblyName>raveDjDownloader</AssemblyName>
         <LangVersion>8</LangVersion>
         <Nullable>enable</Nullable>
+        <PackageVersion>2.0.1</PackageVersion>
+        <Authors>Loc</Authors>
+        <RepositoryUrl>https://github.com/MiniCheese26/RaveDJ-Downloader</RepositoryUrl>
+        <AssemblyVersion>2.0.1</AssemblyVersion>
+        <FileVersion>2.0.1</FileVersion>
     </PropertyGroup>
 
     <ItemGroup>
